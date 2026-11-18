@@ -2,6 +2,7 @@ import { supabase } from "@shared/infrastructure/supabase/client";
 import { Room } from "@features/chat/domain/entities/Room";
 import { Message } from "@features/chat/domain/entities/Message";
 import { IChatRepository } from "@features/chat/domain/repositories/IChatRepository";
+import { decode } from "base64-arraybuffer";
 
 export class SupabaseChatRepository implements IChatRepository {
  
@@ -66,18 +67,16 @@ export class SupabaseChatRepository implements IChatRepository {
     return this.mapMessage(data);
   }
 
-  async uploadImage(uri: string, roomId: string): Promise<string> {
-    const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
+  async uploadImage(roomId: string, base64: string, mimeType: string = 'image/jpeg'): Promise<string> {
+    const ext = mimeType.includes('png') ? 'png' : 'jpg';
     const fileName = `${roomId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
 
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const arrayBuffer = await new Response(blob).arrayBuffer();
+    const arrayBuffer = decode(base64);
 
     const { error } = await supabase.storage
       .from('imagenes')
       .upload(fileName, arrayBuffer, {
-        contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+        contentType: mimeType,
         upsert: false,
       });
 

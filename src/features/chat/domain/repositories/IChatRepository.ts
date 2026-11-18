@@ -12,8 +12,9 @@ export interface IChatRepository {
     imageUrl?: string
   ): Promise<Message>;
   uploadImage(
-    uri: string,
-    roomId: string
+    roomId: string,
+    base64: string,
+    mimeType?: string
   ): Promise<string>;
   //devuelve la funcion unsubscribe, compatible con el return de useEffect
   subscribeToRoom(

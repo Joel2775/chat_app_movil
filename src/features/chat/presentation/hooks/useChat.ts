@@ -38,7 +38,7 @@ export function useChat(roomId: string) {
     return unsubscribe; // Cleanup al desmontar: cierra el WebSocket
   }, [roomId]);
 
-  // Paso 3: enviar mensaje con optimistic update via useMutation
+  // Paso 3: enviar mensaje de texto con optimistic update via useMutation
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
       sendMessageUseCase.execute(roomId, user!.id, content),
@@ -75,10 +75,33 @@ export function useChat(roomId: string) {
     },
   });
 
+  // Paso 4: enviar imagen subiéndola a Supabase Storage mediante base64 decodificado
+  const sendImageMutation = useMutation({
+    mutationFn: async ({
+      base64,
+      mimeType,
+      content,
+    }: {
+      base64: string;
+      mimeType?: string;
+      content?: string;
+    }) => {
+      const imageUrl = await chatRepo.uploadImage(roomId, base64, mimeType);
+      return sendMessageUseCase.execute(roomId, user!.id, content || "", imageUrl);
+    },
+    onSuccess: (realMsg) => {
+      queryClient.setQueryData(["messages", roomId], (old: Message[] = []) => {
+        const exists = old.some((m) => m.id === realMsg.id);
+        return exists ? old : [...old, realMsg];
+      });
+    },
+  });
+
   return {
     messages,
     sendMessage: sendMutation.mutate,
+    sendImageMessage: sendImageMutation.mutateAsync,
     isLoading,
-    isSending: sendMutation.isPending,
+    isSending: sendMutation.isPending || sendImageMutation.isPending,
   };
 }
